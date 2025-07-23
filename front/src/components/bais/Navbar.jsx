@@ -60,7 +60,7 @@ export default function Navbar({ isCollapsed, setIsCollapsed }) {
     },
     {
       name: "Coral",
-      path: "/model-two",
+      path: "/coral",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
