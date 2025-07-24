@@ -53,7 +53,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="relative w-full  text-cyan-200 pb-10 px-6 overflow-hidden mt-[-5rem]">
+    <footer className="relative w-full  text-cyan-200 pb-10 px-6 overflow-hidden mt-[-3em]">
       {/* Animated Wave */}
       <motion.div 
          className="absolute inset-0 w-full h-full z-0 overflow-hidden rotate-180"
@@ -88,28 +88,7 @@ export default function Footer() {
       </motion.div>
 
       {/* Enhanced Starry Background */}
-      <motion.div
-        className="absolute inset-0 z-0 opacity-40 pointer-events-none"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 15% 25%, rgba(74, 222, 255, 0.15) 0%, transparent 15%),
-            radial-gradient(circle at 85% 75%, rgba(74, 222, 255, 0.1) 0%, transparent 12%),
-            radial-gradient(circle at 40% 10%, rgba(74, 222, 255, 0.08) 0%, transparent 10%),
-            radial-gradient(circle at 60% 90%, rgba(74, 222, 255, 0.12) 0%, transparent 13%),
-            radial-gradient(circle at 50% 50%, rgba(74, 222, 255, 0.07) 0%, transparent 10%)
-          `,
-          backgroundSize: "200% 200%",
-        }}
-        initial={{ backgroundPosition: "0% 0%" }}
-        animate={{ backgroundPosition: "100% 100%" }}
-        transition={{
-          duration: 30,
-          repeat: Infinity,
-          repeatType: "reverse",
-          ease: "linear"
-        }}
-      />
-
+  
       {/* Main Content with Animations */}
       <motion.div 
         className="max-w-6xl mx-auto flex flex-col items-center text-center space-y-6 relative z-10 pt-16"
@@ -118,20 +97,28 @@ export default function Footer() {
         variants={contentVariants}
       >
         {/* Logo */}
-        <motion.div variants={itemVariants} className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-cyan-400/20 rounded-full flex items-center justify-center border border-cyan-500/30 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-cyan-400/10 group-hover:bg-cyan-400/20 transition-all duration-500"></div>
-            <IoMdWater className="text-cyan-300 text-xl animate-ripple" />
-            <span className="sr-only">MatsyaArk Logo</span>
-          </div>
-          <h1 className="text-xl font-semibold text-cyan-100 tracking-wider drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 to-cyan-100">
-            MatsyaArk
-          </h1>
-        </motion.div>
+          <motion.div
+                 initial={{ x: "-100%", opacity: 0 }}
+                 animate={{ x: 0, opacity: 1 }}
+                 transition={{ type: "easeInOut", stiffness: 60 }}
+                 className="flex items-center gap-3"
+               >
+                 <video
+                   src="/fish.webm"
+                   autoPlay
+                   loop
+                   muted
+                   playsInline
+                   className="w-10 h-10 rounded-full object-cover"
+                 />
+                 <h1 className="text-xl font-bold tracking-wide text-cyan-300">
+                   MatsyaArk
+                 </h1>
+               </motion.div>
 
         {/* Navigation */}
         <motion.nav variants={itemVariants} className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-cyan-300">
-          {['Pricing', 'About', 'News', 'Research', 'Updates', 'Contact'].map((item) => (
+          {['Home', 'DashBoard', 'Decection', 'Research', 'Coral', 'Contact'].map((item) => (
             <a 
               key={item}
               href={`/${item.toLowerCase()}`} 

@@ -6,8 +6,9 @@ import torchvision.transforms as transforms
 from torchvision import models
 import torch.nn as nn
 from datetime import datetime
+import requests
+from io import BytesIO
 from flask_cors import CORS
-
 
 app = Flask(__name__)
 CORS(app)
@@ -30,7 +31,6 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-# API endpoint to return prediction as JSON
 @app.route("/predict", methods=["POST"])
 def predict_api():
     if "image" not in request.files:
@@ -41,22 +41,41 @@ def predict_api():
         return jsonify({"error": "No file selected."}), 400
 
     try:
+        # Load and transform image
         img = Image.open(file).convert("RGB")
         img_tensor = transform(img).unsqueeze(0).to(device)
 
+        # Predict
         with torch.no_grad():
             output = model(img_tensor)
             pred = torch.argmax(output, dim=1).item()
             label = "Bleached" if pred == 0 else "Healthy"
 
+        # Save image temporarily with correct extension
+        original_ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
+        temp_filename = f"temp{original_ext}"
+        temp_image_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
+        img.save(temp_image_path)
+
+        # Send image file to Node server
+        with open(temp_image_path, 'rb') as img_file:
+            files = {'image': (temp_filename, img_file, f'image/{original_ext.strip(".")}')}
+            gemini_response = requests.post("http://localhost:3000/api/gemini", files=files)
+
+        if gemini_response.status_code != 200:
+            gemini_text = "Gemini explanation failed."
+        else:
+            gemini_text = gemini_response.json().get("result", "No response.")
+
         return jsonify({
             "prediction": label,
-            "class_index": pred
+            "class_index": pred,
+            "gemini_explanation": gemini_text
         })
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Keep existing HTML form route
 @app.route("/", methods=["GET", "POST"])
 def index():
     prediction = None
@@ -69,7 +88,6 @@ def index():
         if file.filename == "":
             return "No file selected."
 
-        # Save file
         filename = datetime.now().strftime("%Y%m%d_%H%M%S_") + file.filename
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
