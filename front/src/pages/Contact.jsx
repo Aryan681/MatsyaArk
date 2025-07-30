@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react"; // Import useState
 import Footer from "../components/bais/Footer";
 import { motion, useAnimation } from "framer-motion";
 import { useInView } from "react-intersection-observer";
@@ -6,6 +6,19 @@ import { useInView } from "react-intersection-observer";
 export default function Contact() {
   const controls = useAnimation();
   const [ref, inView] = useInView({ threshold: 0.1 });
+
+  // State to manage form data
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+
+  // State for form submission feedback
+  const [submissionStatus, setSubmissionStatus] = useState(null); // 'success', 'error', 'submitting'
+  const [submissionMessage, setSubmissionMessage] = useState("");
 
   useEffect(() => {
     if (inView) controls.start("visible");
@@ -20,9 +33,9 @@ export default function Contact() {
         duration: 1,
         ease: "easeOut",
         when: "beforeChildren",
-        staggerChildren: 0.2
-      }
-    }
+        staggerChildren: 0.2,
+      },
+    },
   };
 
   const itemVariants = {
@@ -30,7 +43,61 @@ export default function Contact() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: "easeOut" }
+      transition: { duration: 0.6, ease: "easeOut" },
+    },
+  };
+
+  // Handle input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Prevent default form submission
+
+    setSubmissionStatus("submitting");
+    setSubmissionMessage("Sending your message...");
+
+    try {
+      const response = await fetch("http://localhost:3000/api/posts/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubmissionStatus("success");
+        setSubmissionMessage("Message sent successfully!");
+        setFormData({ // Clear form after successful submission
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          message: "",
+        });
+      } else {
+        setSubmissionStatus("error");
+        setSubmissionMessage(data.message || "Failed to send message. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setSubmissionStatus("error");
+      setSubmissionMessage("Network error. Could not connect to the server.");
+    } finally {
+      // Clear status message after a few seconds
+      setTimeout(() => {
+        setSubmissionStatus(null);
+        setSubmissionMessage("");
+      }, 5000);
     }
   };
 
@@ -101,43 +168,93 @@ export default function Contact() {
                 href="mailto:hello@matsyaark.com"
                 className="text-blue-300 underline hover:text-blue-200 transition-colors duration-300"
               >
-                hello@matsyaark.com
+                aryannaruka7@gmail.com
               </a>{" "}
               or use the form below.
             </motion.p>
 
+            {/* Submission Status Message */}
+            {submissionStatus && (
+              <motion.div
+                className={`p-3 rounded-md text-center text-lg font-medium ${
+                  submissionStatus === "success"
+                    ? "bg-green-600/80 text-white"
+                    : submissionStatus === "error"
+                    ? "bg-red-600/80 text-white"
+                    : "bg-blue-600/80 text-white"
+                }`}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {submissionMessage}
+              </motion.div>
+            )}
+
             <motion.form
               className="grid grid-cols-1 md:grid-cols-2 gap-4"
               variants={containerVariants}
+              onSubmit={handleSubmit} // Add onSubmit handler
             >
-              {[
-                { placeholder: "First Name", type: "text" },
-                { placeholder: "Last Name", type: "text" },
-                { placeholder: "Email Address", type: "email", colSpan: 2 },
-                { placeholder: "+91 (000) 000-0000", type: "tel", colSpan: 2 },
-              ].map((field, idx) => (
-                <motion.input
-                  key={idx}
-                  type={field.type}
-                  placeholder={field.placeholder}
-                  className={`p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 ${field.colSpan === 2 ? "col-span-2" : "col-span-1"}`}
-                  variants={itemVariants}
-                />
-              ))}
+              <motion.input
+                type="text"
+                name="firstName" // Add name attribute
+                placeholder="First Name"
+                value={formData.firstName} // Bind value
+                onChange={handleChange} // Add onChange handler
+                className="p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 col-span-1"
+                variants={itemVariants}
+                required // Make required
+              />
+              <motion.input
+                type="text"
+                name="lastName" // Add name attribute
+                placeholder="Last Name"
+                value={formData.lastName} // Bind value
+                onChange={handleChange} // Add onChange handler
+                className="p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 col-span-1"
+                variants={itemVariants}
+                required // Make required
+              />
+              <motion.input
+                type="email"
+                name="email" // Add name attribute
+                placeholder="Email Address"
+                value={formData.email} // Bind value
+                onChange={handleChange} // Add onChange handler
+                className="p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 col-span-2"
+                variants={itemVariants}
+                required // Make required
+              />
+              <motion.input
+                type="tel"
+                name="phone" // Add name attribute
+                placeholder="+91 (000) 000-0000"
+                value={formData.phone} // Bind value
+                onChange={handleChange} // Add onChange handler
+                className="p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 col-span-2"
+                variants={itemVariants}
+              />
 
               <motion.textarea
                 rows="4"
+                name="message" // Add name attribute
                 placeholder="Share your depths with us..."
+                value={formData.message} // Bind value
+                onChange={handleChange} // Add onChange handler
                 className="col-span-2 p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200"
                 variants={itemVariants}
+                required // Make required
               ></motion.textarea>
 
               <motion.button
                 type="submit"
                 className="col-span-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-md transition duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
                 variants={itemVariants}
+                disabled={submissionStatus === "submitting"} // Disable button during submission
               >
-                Send Your Message →
+                {submissionStatus === "submitting" ? "Sending..." : "Send Your Message →"}
               </motion.button>
             </motion.form>
           </motion.div>

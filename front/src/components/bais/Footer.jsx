@@ -53,7 +53,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="relative w-full  text-cyan-200 pb-10 px-6 overflow-hidden mt-[-3em]">
+    <footer className="relative w-full  text-cyan-200 pb-10 px-6 py-4 overflow-hidden mt-[-3em]">
       {/* Animated Wave */}
       <motion.div 
          className="absolute inset-0 w-full h-full z-0 overflow-hidden rotate-180"
@@ -118,7 +118,7 @@ export default function Footer() {
 
         {/* Navigation */}
         <motion.nav variants={itemVariants} className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-cyan-300">
-          {['Home', 'DashBoard', 'Decection', 'Research', 'Coral', 'Contact'].map((item) => (
+          {['Home', 'DashBoard', 'Fish', 'Coral', 'Contact'].map((item) => (
             <a 
               key={item}
               href={`/${item.toLowerCase()}`} 
@@ -134,12 +134,9 @@ export default function Footer() {
           <div className="text-cyan-400 text-lg font-medium">Follow the Current</div>
           <div className="flex gap-4 sm:gap-6 justify-center text-2xl text-cyan-300">
             {[
-              { icon: <FaInstagram />, label: "Instagram" },
               { icon: <FaGithub />, label: "GitHub" },
               { icon: <FaTwitter />, label: "Twitter" },
-              { icon: <FaFacebook />, label: "Facebook" },
               { icon: <FaLinkedin />, label: "LinkedIn" },
-              { icon: <FaYoutube />, label: "YouTube" }
             ].map((social) => (
               <a
                 key={social.label}

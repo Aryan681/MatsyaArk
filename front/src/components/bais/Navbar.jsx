@@ -15,7 +15,7 @@ export default function Navbar({ isCollapsed, setIsCollapsed }) {
   const [isOpen, setIsOpen] = useState(false); // Mobile
 
   const navItems = [
-    { name: "Home", path: "/home", icon: <FaHome /> },
+    { name: "Home", path: "/", icon: <FaHome /> },
     {
       name: "Dashboard",
       path: "/Dashboard",
@@ -41,7 +41,7 @@ export default function Navbar({ isCollapsed, setIsCollapsed }) {
     },
     {
       name: "Detection",
-      path: "/model-one",
+      path: "/fish",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -63,7 +63,6 @@ export default function Navbar({ isCollapsed, setIsCollapsed }) {
       name: "Coral",
       path: "/coral",
       icon:  <GiCoral /> },
-    { name: "Research", path: "/research", icon: <FaRobot /> },
     { name: "Contact", path: "/contact", icon: <FaPhoneAlt /> },
   ];
 

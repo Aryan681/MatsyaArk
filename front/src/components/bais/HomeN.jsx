@@ -15,10 +15,9 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navItems = [
-    { name: "Home", path: "/home", icon: <FaHome /> },
+    { name: "Home", path: "/", icon: <FaHome /> },
     { name: "Dashboard", path: "/dashboard", icon: <AiFillDashboard /> },
-    { name: "Detection", path: "/detection", icon: <BiSearch /> },
-    { name: "Research", path: "/research", icon: <FaRobot /> },
+    { name: "Detection", path: "/fish", icon: <BiSearch /> },
     { name: "Coral", path: "/coral", icon: <GiCoral /> },
     { name: "Contact", path: "/contact", icon: <FaPhoneAlt /> },
   ];

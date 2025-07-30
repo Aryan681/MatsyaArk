@@ -1,0 +1,6 @@
+flask
+ultralytics>=8.0.36 
+opencv-python
+torch
+torchvision
+torchaudio
