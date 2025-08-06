@@ -16,19 +16,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS settings: allow frontend on Vercel and local dev
+CORS(app, origins=[
+    "https://matsya-ark.vercel.app",
+    "http://localhost:3000"
+])
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Backend API for explanation (React/Node server)
+# URL of React/Node Gemini backend API
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:3000")
 
 # Device setup
 device = torch.device("cpu")
 
-# Load model
+# Load the trained model
 model = models.mobilenet_v2(weights=MobileNet_V2_Weights.DEFAULT)
 model.classifier[1] = nn.Linear(model.classifier[1].in_features, 2)
 model.load_state_dict(torch.load("coral_bleaching_lightweight.pt", map_location=device))
@@ -72,9 +77,12 @@ def predict_api():
         files = {'image': ('image.png', img_byte_arr, 'image/png')}
         try:
             gemini_response = requests.post(f"{BACKEND_URL}/api/gemini", files=files)
-            gemini_text = gemini_response.json().get("result", "No explanation.") \
-                if gemini_response.status_code == 200 else "Gemini explanation failed."
+            if gemini_response.status_code == 200:
+                gemini_text = gemini_response.json().get("result", "No explanation.")
+            else:
+                gemini_text = "Gemini explanation failed."
         except Exception as e:
+            print(f"Gemini request failed: {e}")
             gemini_text = "Gemini backend error."
 
         return jsonify({
@@ -113,5 +121,5 @@ def index():
     return render_template("index.html", prediction=prediction, image_url=image_url, error=error)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # PORT is auto-set by Render
+    port = int(os.environ.get("PORT", 5000))  # Used by Render
     app.run(host="0.0.0.0", port=port, debug=True)
