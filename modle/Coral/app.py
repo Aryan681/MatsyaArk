@@ -15,9 +15,13 @@ CORS(app)
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# Load environment variable
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:3000")
+
 # Load model
 device = torch.device("cpu")
 from torchvision.models import MobileNet_V2_Weights
+
 model = models.mobilenet_v2(weights=MobileNet_V2_Weights.DEFAULT)
 model.classifier[1] = nn.Linear(model.classifier[1].in_features, 2)
 model.load_state_dict(torch.load("coral_bleaching_lightweight.pt", map_location=device))
@@ -60,7 +64,7 @@ def predict_api():
         # Send image file to Node server
         with open(temp_image_path, 'rb') as img_file:
             files = {'image': (temp_filename, img_file, f'image/{original_ext.strip(".")}')}
-            gemini_response = requests.post("http://localhost:3000/api/gemini", files=files)
+            gemini_response = requests.post(f"{BACKEND_URL}/api/gemini", files=files)
 
         if gemini_response.status_code != 200:
             gemini_text = "Gemini explanation failed."
