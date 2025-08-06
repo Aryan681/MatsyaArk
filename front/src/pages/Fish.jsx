@@ -221,7 +221,7 @@ const StatusWidget = ({ icon, title, children }) => (
     <div className="text-2xl text-cyan-300">{icon}</div>
     <div>
       <p className="text-sm text-white/60">{title}</p>
-      <p className="text-lg font-bold">{children}</p>
+      <div className="text-lg font-bold">{children}</div>
     </div>
   </div>
 );

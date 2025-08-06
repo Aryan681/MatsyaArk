@@ -11,7 +11,7 @@ const app = express();
 app.use(cors()); 
 app.use(express.json()); 
 
-app.use('/api/gemini', require('./routes/geminiRouter'));
+app.use('/api', require('./routes/geminiRouter'));
 app.use('/api/posts', require('./routes/postRouter'));
 
 const startServer = async () => {

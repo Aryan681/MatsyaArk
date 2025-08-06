@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function getGeminiResponse(base64Image) {
   const prompt = `
-    You are an expert marine biologist AI. The user has uploaded an image of a coral reef. Your job is to identify:
+You are an expert marine biologist AI. The user has uploaded an image of a coral reef. Your job is to identify:
 
 - The coral **type**
 - The **major geographical location** it is found in
@@ -19,11 +19,8 @@ async function getGeminiResponse(base64Image) {
 - benefits: A list of objects, each with a type and description.
 
 📌 Do **not** include any markdown formatting or triple backticks. Just raw JSON.
-
   `;
 
-  // --- FIX START ---
-  // Change "models/gemini-1.5-pro-vision" to "models/gemini-1.5-pro"
   const model = genAI.getGenerativeModel({
     model: "models/gemini-2.5-flash",
     generationConfig: {
@@ -31,11 +28,10 @@ async function getGeminiResponse(base64Image) {
     },
   });
 
-
   const imagePart = {
     inlineData: {
       data: base64Image.replace(/^data:image\/\w+;base64,/, ""),
-      mimeType: "image/jpeg", // Ensure this matches the actual image type
+      mimeType: "image/jpeg",
     },
   };
 
@@ -49,7 +45,6 @@ async function getGeminiResponse(base64Image) {
     return response.text();
   } catch (error) {
     console.error("Error generating content with Gemini:", error);
-    // You might want to re-throw or handle the error more specifically
     throw new Error(`Gemini content generation failed: ${error.message}`);
   }
 }

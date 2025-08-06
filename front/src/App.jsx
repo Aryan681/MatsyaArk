@@ -5,6 +5,7 @@ import HeroPage from "./pages/HeroPage";
 import Contact from "./pages/Contact";
 import Coral from "./pages/Coral";
 import Fish from "./pages/Fish"
+import Dashboard from "./pages/Dashboard";
 function App() {
   return (
     <Router>
@@ -12,6 +13,7 @@ function App() {
         {/* Layout Route */}
          <Route path="/" element={<HeroPage />} />
         <Route element={<Base />}>
+         <Route path="/dashboard" element={<Dashboard/>} />
          <Route path="/contact" element={<Contact/>} />
          <Route path="/coral" element={<Coral/>} />
          <Route path="/fish" element={<Fish/>} />

@@ -4,24 +4,11 @@ from ultralytics import YOLO
 import threading
 import time
 from flask_cors import CORS
-import torch # Import torch to check for CUDA availability
 
 app = Flask(__name__)
 CORS(app)
-
-# --- MODIFICATION START ---
 # Load the YOLOv8 model
-# Check if CUDA (GPU) is available and set the device accordingly
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-print(f"Using device: {device}") # Print which device is being used
 model = YOLO('best.pt')
-
-# Ensure the model uses the specified device
-# This is typically done automatically if `torch.cuda.is_available()` is true
-# but you can explicitly set it for clarity or if you have multiple GPUs
-# (e.g., device='cuda:0', 'cuda:1' etc.)
-model.to(device)
-# --- MODIFICATION END ---
 
 # Shared data structure for latest detections
 latest_detections = []
@@ -30,7 +17,7 @@ frame_lock = threading.Lock() # To protect shared data
 # Thread for continuously processing video frames and updating detections
 def process_video_and_detect():
     global latest_detections
-    video_path = 'This_the_fish_202507231344_tvan5.mp4'
+    video_path = 'This_the_fish_202507231344_tvan4.mp4'
     camera = cv2.VideoCapture(video_path)
 
     if not camera.isOpened():
@@ -43,10 +30,7 @@ def process_video_and_detect():
             camera.set(cv2.CAP_PROP_POS_FRAMES, 0) # Loop video
             continue
 
-        # --- MODIFICATION START ---
-        # Pass the 'device' argument to the model's predict method
-        results = model(frame, verbose=False, device=device)
-        # --- MODIFICATION END ---
+        results = model(frame, verbose=False) # verbose=False to suppress print output per frame
         
         detections_for_frame = []
         for r in results:
@@ -91,7 +75,7 @@ def generate_frames():
             frame_bytes = buffer.tobytes()
 
         yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\r' + frame_bytes + b'\r\n')
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
         time.sleep(0.01) # Add a small delay for stream stability
 
 @app.route('/')
