@@ -19,7 +19,8 @@ import Footer from "../components/bais/Footer"
 gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
 // --- Configuration ---
-const BACKEND_URL = "http://127.0.0.1:5000";
+const CORAL_URL = import.meta.env.VITE_CORAL_URL || "http://127.0.0.1:5000";
+
 
 // --- API Function ---
 async function getPrediction(file) {
@@ -27,7 +28,7 @@ async function getPrediction(file) {
   formData.append("image", file);
 
   try {
-    const response = await fetch(`${BACKEND_URL}/predict`, {
+    const response = await fetch(`${CORAL_URL}/predict`, {
       method: "POST",
       body: formData,
     });

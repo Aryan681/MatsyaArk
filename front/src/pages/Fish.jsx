@@ -5,6 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FiDatabase, FiEye, FiBarChart2, FiClock } from "react-icons/fi"; // Added FiClock
 import Footer from "../components/bais/Footer"
 gsap.registerPlugin(ScrollTrigger);
+const DETECTION_URL = import.meta.env.VITE_DETECTION_URL ;
 
 // Helper Component: Animated Counter
 const AnimatedCounter = ({ value }) => {
@@ -33,7 +34,7 @@ export default function Fish() {
   useEffect(() => {
     let errorTimeout;
     const fetchDetections = () => {
-      fetch("http://localhost:8000/detections")
+      fetch(`${DETECTION_URL}/detections`)
         .then((res) => res.json())
         .then((data) => {
           setDetections(data.detections || []);

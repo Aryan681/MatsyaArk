@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"; // Import useState
 import Footer from "../components/bais/Footer";
 import { motion, useAnimation } from "framer-motion";
 import { useInView } from "react-intersection-observer";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
 
 export default function Contact() {
   const controls = useAnimation();
@@ -64,7 +65,7 @@ export default function Contact() {
     setSubmissionMessage("Sending your message...");
 
     try {
-      const response = await fetch("http://localhost:3000/api/posts/contact", {
+      const response = await fetch(`${BACKEND_URL}/api/posts/contact`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
