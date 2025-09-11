@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, memo } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "framer-motion";
@@ -48,37 +48,21 @@ const features = [
 
 gsap.registerPlugin(ScrollTrigger);
 
-export default function HeroPage() {
+const HeroPage = memo(() => {
   const sectionsRef = useRef([]);
-  const waveRef = useRef(null);
-  const transitionRef = useRef(null);
   const fishRef = useRef(null);
-  const bubbleRefs = useRef([]);
-  const coralParticleRefs = useRef([]);
   const featureGridRef = useRef(null);
-
+  
   const addToSectionsRef = useCallback((el) => {
-    if (el && !sectionsRef.current.includes(el)) {
-      sectionsRef.current.push(el);
-    }
-  }, []);
-
-  const addToBubbleRefs = useCallback((el) => {
-    if (el && !bubbleRefs.current.includes(el)) {
-      bubbleRefs.current.push(el);
-    }
-  }, []);
-
-  const addToCoralParticleRefs = useCallback((el) => {
-    if (el && !coralParticleRefs.current.includes(el)) {
-      coralParticleRefs.current.push(el);
-    }
+    if (el) sectionsRef.current.push(el);
   }, []);
 
   useEffect(() => {
-    ScrollTrigger.refresh();
+    ScrollTrigger.getAll().forEach((st) => st.kill());
+    gsap.globalTimeline.clear();
 
-    sectionsRef.current.forEach((el) => {
+    const sections = sectionsRef.current;
+    sections.forEach((el) => {
       gsap.fromTo(
         el,
         { opacity: 0, y: 60 },
@@ -97,117 +81,50 @@ export default function HeroPage() {
       );
     });
 
-    gsap.to(fishRef.current, {
-      x: "120vw",
-      duration: 30,
-      ease: "none",
-      repeat: -1,
-      onRepeat: () => {
-        gsap.set(fishRef.current, {
-          x: "-30vw",
-          y: gsap.utils.random(-50, 50),
-        });
-      },
-      delay: gsap.utils.random(0, 10),
-    });
-
-    gsap.set(fishRef.current, { x: "-30vw" });
-
-    bubbleRefs.current.forEach((bubble) => {
-      gsap.fromTo(
-        bubble,
-        {
-          y: 0,
-          opacity: 0.1 + Math.random() * 0.4,
-          scale: 0.5 + Math.random() * 0.5,
+    if (fishRef.current) {
+      gsap.to(fishRef.current, {
+        x: "120vw",
+        duration: 30,
+        ease: "none",
+        repeat: -1,
+        onRepeat: () => {
+          gsap.set(fishRef.current, {
+            x: "-30vw",
+            y: gsap.utils.random(-50, 50),
+          });
         },
+        delay: gsap.utils.random(0, 10),
+      });
+      gsap.set(fishRef.current, { x: "-30vw" });
+    }
+
+    gsap.utils.toArray(featureGridRef.current?.children || []).forEach((card, i) => {
+      gsap.fromTo(
+        card,
+        { opacity: 0, y: 40 },
         {
-          y: -window.innerHeight * 1.5,
-          x: `+=${gsap.utils.random(-80, 80)}`,
-          opacity: 0,
-          scale: 0.8 + Math.random() * 0.5,
-          duration: gsap.utils.random(15, 25),
-          ease: "power1.in",
-          repeat: -1,
-          delay: gsap.utils.random(0, 10),
-          onRepeat: () => {
-            gsap.set(bubble, {
-              y: 0,
-              x: 0,
-              opacity: 0.1 + Math.random() * 0.4,
-              scale: 0.5 + Math.random() * 0.5,
-            });
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          delay: i * 0.1,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: card,
+            start: "top 85%",
+            toggleActions: "play none none reverse",
           },
         }
       );
     });
 
-    coralParticleRefs.current.forEach((coral) => {
-      gsap.to(coral, {
-        x: `+=${(Math.random() - 0.5) * 200}`,
-        y: `+=${(Math.random() - 0.5) * 200}`,
-        rotation: Math.random() * 360,
-        scale: 0.8 + Math.random() * 0.4,
-        opacity: Math.random() * 0.6 + 0.3,
-        duration: Math.random() * 20 + 15,
-        delay: Math.random() * 8,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-      });
-    });
-
-    gsap.set(waveRef.current, {
-      xPercent: -50,
-      width: "200%",
-      left: "50%",
-    });
-
-    gsap.set(transitionRef.current, {
-      xPercent: -50,
-      width: "200%",
-      left: "50%",
-    });
-
-    if (waveRef.current && sectionsRef.current[0]) {
-      gsap.to(waveRef.current.querySelector(".wave-shape-fill"), {
-        fill: "#01161E",
-        duration: 1,
-        ease: "power1.inOut",
-        scrollTrigger: {
-          trigger: sectionsRef.current[0],
-          start: "top 90%",
-          end: "top 10%",
-          scrub: true,
-        },
-      });
-    }
-
-    if (transitionRef.current && sectionsRef.current[1]) {
-      gsap.to(transitionRef.current.querySelector(".transition-shape-fill"), {
-        fill: "#002D3A",
-        duration: 1,
-        ease: "power1.inOut",
-        scrollTrigger: {
-          trigger: sectionsRef.current[1],
-          start: "top 90%",
-          end: "top 10%",
-          scrub: true,
-        },
-      });
-    }
-
     gsap.utils.toArray(".zig-zag-item").forEach((item, index) => {
       const media = item.querySelector(".zig-zag-media");
       const content = item.querySelector(".zig-zag-content");
-      const isReversed = item.classList.contains("lg:flex-row-reverse");
+      const isReversed = index % 2 === 0;
 
       gsap.fromTo(
         media,
-        {
-          xPercent: isReversed ? -100 : 100,
-          opacity: 0,
-        },
+        { xPercent: isReversed ? -100 : 100, opacity: 0 },
         {
           xPercent: 0,
           opacity: 1,
@@ -223,10 +140,7 @@ export default function HeroPage() {
 
       gsap.fromTo(
         content,
-        {
-          xPercent: isReversed ? 100 : -100,
-          opacity: 0,
-        },
+        { xPercent: isReversed ? 100 : -100, opacity: 0 },
         {
           xPercent: 0,
           opacity: 1,
@@ -239,74 +153,24 @@ export default function HeroPage() {
           },
         }
       );
-
-      gsap.to(media, {
-        yPercent: isReversed ? 10 : -10,
-        ease: "none",
-        scrollTrigger: {
-          trigger: item,
-          start: "center center",
-          end: "bottom top",
-          scrub: 0.5,
-        },
-      });
-
-      gsap.to(content, {
-        yPercent: isReversed ? -40 : 40,
-        ease: "none",
-        scrollTrigger: {
-          trigger: item,
-          start: "top center",
-          end: "bottom top",
-          scrub: 0.5,
-        },
-      });
-    });
-
-    // The two gsap.utils.toArray calls from outside are now here
-    gsap.utils.toArray(".feature-card").forEach((card, i) => {
-      gsap.to(card, {
-        opacity: 1,
-        y: 0,
-        duration: 1,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: card,
-          start: "top 85%",
-          toggleActions: "play none none reverse",
-        },
-      });
-
-      gsap.to(card, {
-        yPercent: -20,
-        ease: "none",
-        scrollTrigger: {
-          trigger: card,
-          start: "top center",
-          end: "bottom top",
-          scrub: 0.5,
-        },
-      });
     });
 
     return () => {
       ScrollTrigger.getAll().forEach((st) => st.kill());
-      gsap.globalTimeline.clear();
     };
-  }, [addToSectionsRef, addToBubbleRefs, addToCoralParticleRefs]);
+  }, []);
 
   return (
     <div className="w-full overflow-x-hidden text-white relative">
       <video
-        src="/more.webm
-        "
+        src="/more.webm"
         autoPlay
         loop
         muted
         playsInline
         className="fixed top-0 left-0 w-screen h-screen object-cover z-[-2] pointer-events-none"
+        preload="auto"
       />
-
       <div className="fixed inset-0 bg-black/40 z-[-1] pointer-events-none" />
 
       <HomeN />
@@ -361,6 +225,7 @@ export default function HeroPage() {
                 loop
                 muted
                 playsInline
+                preload="auto"
                 className="w-full h-auto rounded-lg"
               />
             </div>
@@ -392,7 +257,6 @@ export default function HeroPage() {
             Blending marine biology with AI to explore and preserve the ocean's
             future.
           </motion.p>
-
           <div
             className="grid xl:grid-cols-3 md:grid-cols-2 gap-10 px-4"
             ref={featureGridRef}
@@ -449,6 +313,7 @@ export default function HeroPage() {
                   loop
                   muted
                   playsInline
+                  preload="auto"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               </div>
@@ -465,8 +330,9 @@ export default function HeroPage() {
           ))}
         </div>
       </section>
-
       <Footer />
     </div>
   );
-}
+});
+
+export default HeroPage;
