@@ -171,7 +171,7 @@ const Contact = memo(() => {
             variants={itemVariants}
           >
             <video
-              src="/cont.mp4"
+              src="/cont.webm"
               autoPlay
               loop
               muted

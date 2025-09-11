@@ -297,7 +297,7 @@ const HeroPage = memo(() => {
             {
               title: "Sustainable Ecosystem Mapping",
               desc: "Mapping coral reefs, thermal currents, and biodiversity hotspots with self-powered drones ensures comprehensive and eco-friendly data collection.",
-              video: "/USP.mp4",
+              video: "/USP.webm",
             },
           ].map((item, n) => (
             <div

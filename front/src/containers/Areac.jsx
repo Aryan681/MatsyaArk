@@ -1,5 +1,5 @@
 // src/containers/Areac.jsx
-import React, { useEffect, useState, memo, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import Papa from "papaparse";
 import {
   AreaChart,
@@ -13,8 +13,7 @@ import {
   Brush,
 } from "recharts";
 
-// Memoize the CustomTooltip component
-const CustomTooltip = memo(({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const dataPoint = payload[0].payload;
     const totalCoralCover =
@@ -38,111 +37,64 @@ const CustomTooltip = memo(({ active, payload, label }) => {
     );
   }
   return null;
-});
+};
 
-// Memoize the main component to prevent unnecessary re-renders
-const Areac = memo(() => {
-  const [rawData, setRawData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function Areac() {
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    const fetchAndParseCsv = async () => {
-      try {
-        const res = await fetch("/coral_density.csv");
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const text = await res.text();
-
+    fetch("/coral_density.csv")
+      .then((res) => res.text())
+      .then((text) => {
         Papa.parse(text, {
           header: true,
           skipEmptyLines: true,
-          complete: ({ data, errors }) => {
-            if (errors.length) {
-              console.error("CSV parsing errors:", errors);
-              setError("Failed to parse CSV data.");
-            } else {
-              setRawData(data);
-              setError(null);
-            }
-            setLoading(false);
+          complete: ({ data }) => {
+            const groupedByLatitude = {};
+
+            data.forEach((row) => {
+              const lat = parseFloat(row["Latitude"]);
+              const lon = parseFloat(row["Longitude"]);
+              const coral = parseFloat(row["Live_Coral_Cover(%)"]);
+
+              if (isNaN(lat) || isNaN(lon) || isNaN(coral)) return;
+
+              const roundedLat = Math.round(lat * 2) / 2;
+              const key = roundedLat.toFixed(1);
+
+              if (!groupedByLatitude[key]) {
+                groupedByLatitude[key] = {
+                  latitude: roundedLat,
+                  totalCoastal: 0,
+                  totalMidwater: 0,
+                  totalDeepwater: 0,
+                  totalLongitudes: 0,
+                  count: 0,
+                };
+              }
+
+              groupedByLatitude[key].totalCoastal += coral;
+              groupedByLatitude[key].totalMidwater += coral * 0.9;
+              groupedByLatitude[key].totalDeepwater += coral * 0.7;
+              groupedByLatitude[key].totalLongitudes += lon;
+              groupedByLatitude[key].count += 1;
+            });
+
+            const processedData = Object.values(groupedByLatitude)
+              .map((entry) => ({
+                location: entry.latitude.toFixed(1),
+                coastal: parseFloat((entry.totalCoastal / entry.count).toFixed(2)),
+                midwater: parseFloat((entry.totalMidwater / entry.count).toFixed(2)),
+                deepwater: parseFloat((entry.totalDeepwater / entry.count).toFixed(2)),
+                avgLongitude: parseFloat((entry.totalLongitudes / entry.count).toFixed(2)),
+              }))
+              .sort((a, b) => parseFloat(a.location) - parseFloat(b.location));
+
+            setChartData(processedData);
           },
         });
-      } catch (err) {
-        console.error("Error fetching or processing data:", err);
-        setError("Could not load coral data. Please try again later.");
-        setLoading(false);
-      }
-    };
-
-    fetchAndParseCsv();
+      });
   }, []);
-
-  // Use useMemo to memoize the processed data. This prevents the heavy
-  // data transformation logic from running on every single re-render
-  // unless the rawData state actually changes.
-  const chartData = useMemo(() => {
-    if (rawData.length === 0) return [];
-
-    const groupedByLatitude = {};
-
-    rawData.forEach((row) => {
-      const lat = parseFloat(row["Latitude"]);
-      const lon = parseFloat(row["Longitude"]);
-      const coral = parseFloat(row["Live_Coral_Cover(%)"]);
-
-      if (isNaN(lat) || isNaN(lon) || isNaN(coral)) return;
-
-      const roundedLat = Math.round(lat * 2) / 2;
-      const key = roundedLat.toFixed(1);
-
-      if (!groupedByLatitude[key]) {
-        groupedByLatitude[key] = {
-          latitude: roundedLat,
-          totalCoastal: 0,
-          totalMidwater: 0,
-          totalDeepwater: 0,
-          totalLongitudes: 0,
-          count: 0,
-        };
-      }
-
-      groupedByLatitude[key].totalCoastal += coral;
-      groupedByLatitude[key].totalMidwater += coral * 0.9;
-      groupedByLatitude[key].totalDeepwater += coral * 0.7;
-      groupedByLatitude[key].totalLongitudes += lon;
-      groupedByLatitude[key].count += 1;
-    });
-
-    const processedData = Object.values(groupedByLatitude)
-      .map((entry) => ({
-        location: entry.latitude.toFixed(1),
-        coastal: parseFloat((entry.totalCoastal / entry.count).toFixed(2)),
-        midwater: parseFloat((entry.totalMidwater / entry.count).toFixed(2)),
-        deepwater: parseFloat((entry.totalDeepwater / entry.count).toFixed(2)),
-        avgLongitude: parseFloat((entry.totalLongitudes / entry.count).toFixed(2)),
-      }))
-      .sort((a, b) => parseFloat(a.location) - parseFloat(b.location));
-
-    return processedData;
-  }, [rawData]);
-
-  if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center bg-[#01161E] text-white">
-        <p>Loading chart data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="h-full flex items-center justify-center bg-[#01161E] text-white">
-        <p className="text-red-500">{error}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-[#01161E] h-full p-4 border border-cyan-400 text-white shadow-2xl overflow-hidden">
@@ -191,7 +143,8 @@ const Areac = memo(() => {
             stroke="#cbd5e1"
             tickLine={false}
             axisLine={{ stroke: "#475569" }}
-            tickFormatter={(val) => `${(val * 100).toFixed(0)}%`}
+            tickFormatter={(val) => `${val.toFixed(0)}%`}
+            domain={[0, 1]}
             label={{
               value: "Coral Cover Percentage",
               angle: -90,
@@ -239,23 +192,24 @@ const Areac = memo(() => {
             activeDot={{ r: 7, fill: "#059669", stroke: "#fff", strokeWidth: 2 }}
           />
 
-       <div className="display:none">   <Brush
-            dataKey="location"
-            height={30}
-            stroke="#f97316"
-            fill="#f973161A"
-            travellerWidth={15}
-            gap={8}
-            y={390}
-          >
-            <AreaChart>
-              <Area type="monotone" dataKey="coastal" stroke="#2563eb" fill="#2563eb" />
-            </AreaChart>
-          </Brush></div>
+         <div style={{ display: "none" }}>
+  <Brush
+    dataKey="location"
+    height={30}
+    stroke="#f97316"
+    fill="#f973161A"
+    travellerWidth={15}
+    gap={8}
+    y={390}
+  >
+    <AreaChart>
+      <Area type="monotone" dataKey="coastal" stroke="#2563eb" fill="#2563eb" />
+    </AreaChart>
+  </Brush>
+</div>
+
         </AreaChart>
       </ResponsiveContainer>
     </div>
   );
-});
-
-export default Areac;
+}
