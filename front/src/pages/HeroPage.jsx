@@ -298,7 +298,8 @@ export default function HeroPage() {
   return (
     <div className="w-full overflow-x-hidden text-white relative">
       <video
-        src="/more.mp4"
+        src="/more.webm
+        "
         autoPlay
         loop
         muted
@@ -416,9 +417,7 @@ export default function HeroPage() {
         </div>
       </section>
 
-      <section
-        className="relative z-10 bg-transparent px-6 py-28 overflow-hidden"
-      >
+      <section className="relative z-10 bg-transparent px-6 py-28 overflow-hidden">
         <div className="max-w-6xl mx-auto space-y-28">
           {[
             {

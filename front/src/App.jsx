@@ -4,6 +4,7 @@ import "./App.css";
 
 // Import the base layout component
 import Base from "./layout/Base";
+import Loading from "./components/loding/Loading";
 
 // Lazy-load the page components
 const HeroPage = lazy(() => import("./pages/HeroPage"));
@@ -15,7 +16,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 function App() {
   return (
     <Router>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<Loading/>}>
         <Routes>
           {/* Layout Route */}
           <Route path="/" element={<HeroPage />} />
