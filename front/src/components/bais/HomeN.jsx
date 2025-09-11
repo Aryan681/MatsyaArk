@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,7 +10,8 @@ import { AiFillDashboard } from "react-icons/ai";
 import { BiSearch } from "react-icons/bi";
 import { GiCoral } from "react-icons/gi";
 
-export default function Navbar() {
+// Memoize the component to prevent unnecessary re-renders
+const Navbar = memo(() => {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -22,12 +23,33 @@ export default function Navbar() {
     { name: "Contact", path: "/contact", icon: <FaPhoneAlt /> },
   ];
 
+  // This effect is fine, but consider alternative CSS solutions for better performance
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "auto";
   }, [menuOpen]);
 
+  // Use a more performant video component for production
+  // This helps with initial load and browser compatibility
+  const VideoLogo = memo(() => (
+    <video
+      src="/fish.webm"
+      autoPlay
+      loop
+      muted
+      playsInline
+      className="w-10 h-10 rounded-full object-cover"
+      aria-label="MatsyaArk Logo Animation"
+      // Added preloading and crossOrigin attributes for optimization
+      preload="auto"
+      crossOrigin="anonymous"
+    >
+      {/* Fallback source for other browsers */}
+      <source src="/fish.mp4" type="video/mp4" />
+    </video>
+  ));
+
   return (
-    <nav className="w-full fixed top-4 z-50 flex justify-center px-4">
+    <nav className="w-full fixed top-4 z-50 flex justify-center px-4" aria-label="Main navigation">
       <div className="w-full max-w-5xl bg-[#1d3c4e] text-white shadow-md rounded-3xl px-6 py-2 flex items-center justify-between">
         {/* Left - Logo */}
         <motion.div
@@ -36,14 +58,7 @@ export default function Navbar() {
           transition={{ type: "easeInOut", stiffness: 60 }}
           className="flex items-center gap-3"
         >
-          <video
-            src="/fish.webm"
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-10 h-10 rounded-full object-cover"
-          />
+          <VideoLogo />
           <h1 className="text-xl font-bold tracking-wide text-cyan-300">
             MatsyaArk
           </h1>
@@ -60,6 +75,7 @@ export default function Navbar() {
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition hover:text-cyan-200 hover:bg-cyan-400/10 ${
                   isActive ? "bg-cyan-400/10 text-cyan-300" : "text-white"
                 }`}
+                aria-current={isActive ? "page" : undefined}
               >
                 <span className="text-lg text-cyan-400">{icon}</span>
                 {name}
@@ -74,6 +90,7 @@ export default function Navbar() {
             onClick={() => setMenuOpen(!menuOpen)}
             className="text-cyan-300 hover:text-cyan-100"
             aria-label="Toggle Menu"
+            aria-expanded={menuOpen}
           >
             {menuOpen ? (
               <svg
@@ -120,6 +137,7 @@ export default function Navbar() {
                   className={`flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition hover:text-cyan-200 hover:bg-cyan-400/10 ${
                     isActive ? "bg-cyan-400/10 text-cyan-300" : "text-white"
                   }`}
+                  aria-current={isActive ? "page" : undefined}
                 >
                   <span className="text-lg text-cyan-400">{icon}</span>
                   {name}
@@ -131,4 +149,6 @@ export default function Navbar() {
       </AnimatePresence>
     </nav>
   );
-}
+});
+
+export default Navbar;

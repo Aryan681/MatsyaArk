@@ -20,7 +20,8 @@ app = Flask(__name__)
 # CORS settings: allow frontend on Vercel and local dev
 CORS(app, origins=[
     "https://matsya-ark.vercel.app",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "http://localhost:5173"  
 ])
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -28,6 +29,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # URL of React/Node Gemini backend API
+# Correct line
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:3000")
 
 # Device setup

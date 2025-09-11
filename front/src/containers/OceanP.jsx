@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, memo, useMemo } from "react";
 import Papa from "papaparse";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -7,79 +7,83 @@ const COLORS = [
   "#38bdf8", "#22d3ee", "#2dd4bf", "#a5b4fc", "#93c5fd", "#67e8f9"
 ];
 
-const CustomTooltip = ({ active, payload, coordinate }) => {
+const CustomTooltip = memo(({ active, payload }) => {
   if (!active || !payload || !payload.length || !payload[0]?.payload) return null;
 
   const data = payload[0].payload;
   const { Pollution_Type, Amount_Tonnes, percentage } = data;
-  const tooltipX = coordinate?.x + 15 || 0;
-  const tooltipY = coordinate?.y + 15 || 0;
 
   return (
     <div
-      className="absolute z-10 pointer-events-none transition-opacity duration-300 ease-in-out"
-      style={{ left: tooltipX, top: tooltipY }}
+      className="bg-[#031a24] border border-cyan-500/50 rounded-lg p-3 shadow-xl backdrop-blur-sm"
+      style={{
+        background: 'radial-gradient(circle at top left, rgba(6,78,118,0.3) 0%, rgba(3,26,36,0.9) 70%)',
+        boxShadow: '0 0 15px rgba(14,165,233,0.4)',
+        border: '1px solid rgba(14,165,233,0.3)',
+        minWidth: '160px',
+      }}
     >
-      <div
-        className="bg-[#031a24] border border-cyan-500/50 rounded-lg p-3 shadow-xl backdrop-blur-sm"
-        style={{
-          background: 'radial-gradient(circle at top left, rgba(6,78,118,0.3) 0%, rgba(3,26,36,0.9) 70%)',
-          boxShadow: '0 0 15px rgba(14,165,233,0.4)',
-          border: '1px solid rgba(14,165,233,0.3)',
-          minWidth: '160px',
-        }}
-      >
-        <div className="text-cyan-300 font-bold text-sm mb-1">{Pollution_Type || 'Unknown'}</div>
-        <div className="text-white text-base font-semibold">
-          {(Amount_Tonnes || 0)?.toLocaleString()} Tonnes
-        </div>
-        {percentage !== undefined && !isNaN(percentage) && (
-          <div className="text-cyan-100 text-xs mt-1">
-            {percentage.toFixed(2)}% of total
-          </div>
-        )}
+      <div className="text-cyan-300 font-bold text-sm mb-1">{Pollution_Type || 'Unknown'}</div>
+      <div className="text-white text-base font-semibold">
+        {(Amount_Tonnes || 0)?.toLocaleString()} Tonnes
       </div>
+      {percentage !== undefined && !isNaN(percentage) && (
+        <div className="text-cyan-100 text-xs mt-1">
+          {percentage.toFixed(2)}% of total
+        </div>
+      )}
     </div>
   );
-};
+});
 
-export default function OceanP() {
-  const [chartData, setChartData] = useState([]);
-  const [totalAmount, setTotalAmount] = useState(0);
+const OceanP = memo(() => {
+  const [rawData, setRawData] = useState([]);
   const [hovered, setHovered] = useState(null);
   const [activeIndex, setActiveIndex] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/ocean_pollution.csv")
-      .then((res) => res.text())
-      .then((csv) => {
-        Papa.parse(csv, {
-          header: true,
-          skipEmptyLines: true,
-          complete: ({ data }) => {
-            const parsed = data
-              .map((d) => ({
-                Pollution_Type: d.Pollution_Type,
-                Amount_Tonnes: parseInt(d.Amount_Tonnes),
-              }))
-              .filter((d) => d.Pollution_Type && !isNaN(d.Amount_Tonnes));
-
-            const total = parsed.reduce((acc, d) => acc + d.Amount_Tonnes, 0);
-            setTotalAmount(total);
-
-            const enriched = parsed.map((d) => ({
-              ...d,
-              percentage: (d.Amount_Tonnes / total) * 100,
-            }));
-
-            setChartData(enriched);
-            setIsLoading(false);
-          },
-        });
-      })
-      .catch(() => setIsLoading(false));
+  const fetchAndParseData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/ocean_pollution.csv");
+      if (!res.ok) {
+        throw new Error("Failed to fetch data.");
+      }
+      const csv = await res.text();
+      Papa.parse(csv, {
+        header: true,
+        skipEmptyLines: true,
+        complete: ({ data }) => {
+          setRawData(data);
+          setIsLoading(false);
+        },
+      });
+    } catch (error) {
+      console.error("Error loading data:", error);
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAndParseData();
+  }, [fetchAndParseData]);
+
+  const { chartData, totalAmount } = useMemo(() => {
+    const parsed = rawData
+      .map((d) => ({
+        Pollution_Type: d.Pollution_Type,
+        Amount_Tonnes: parseInt(d.Amount_Tonnes),
+      }))
+      .filter((d) => d.Pollution_Type && !isNaN(d.Amount_Tonnes));
+
+    const total = parsed.reduce((acc, d) => acc + d.Amount_Tonnes, 0);
+    const enriched = parsed.map((d) => ({
+      ...d,
+      percentage: (d.Amount_Tonnes / total) * 100,
+    }));
+
+    return { chartData: enriched, totalAmount: total };
+  }, [rawData]);
 
   const handleEnter = useCallback((data, index) => {
     setHovered(data);
@@ -92,16 +96,13 @@ export default function OceanP() {
   }, []);
 
   return (
-    <div className="w-full h-full overflow-hidden rounded-lg border border-cyan-400 bg-gradient-to-br from-[#001728] to-[#003050] 0 text-white shadow-xl flex flex-col p-2 relative">
-      
-      {/* Title at top-left */}
+    <div className="w-full h-full overflow-hidden rounded-lg border border-cyan-400 bg-gradient-to-br from-[#001728] to-[#003050] text-white shadow-xl flex flex-col p-2 relative">
       <div className="absolute top-2 left-3 z-10">
         <h2 className="text-sm md:text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400 inline">
           Ocean Pollutants
         </h2>
       </div>
 
-      {/* Loading or No Data */}
       {isLoading ? (
         <div className="flex-1 flex justify-center items-center">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
@@ -114,7 +115,6 @@ export default function OceanP() {
         <div className="flex-1 relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              {/* Inner dummy circle for design */}
               <Pie
                 data={[{ value: 1 }]}
                 dataKey="value"
@@ -156,7 +156,7 @@ export default function OceanP() {
                   />
                 ))}
               </Pie>
-              {hovered && <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(8, 145, 178, 0.1)' }} />}
+              <Tooltip content={<CustomTooltip />} />
               <text
                 x="50%"
                 y="50%"
@@ -183,7 +183,6 @@ export default function OceanP() {
         </div>
       )}
 
-      {/* Legend */}
       <div className="flex flex-wrap justify-center gap-1 mt-2 overflow-auto text-xs">
         {chartData.map((entry, idx) => (
           <div
@@ -206,4 +205,6 @@ export default function OceanP() {
       </div>
     </div>
   );
-}
+});
+
+export default OceanP;

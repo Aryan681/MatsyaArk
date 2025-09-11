@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import Papa from "papaparse";
 import {
   LineChart,
@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = memo(({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const dateLabel = new Date(label).toLocaleDateString("en-US", {
       year: "numeric",
@@ -31,9 +31,9 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
   }
   return null;
-};
+});
 
-export default function WaterQ() {
+const WaterQ = memo(() => {
   const [data, setData] = useState([]);
   const [visibleLines, setVisibleLines] = useState({
     temperature: true,
@@ -41,51 +41,96 @@ export default function WaterQ() {
     oxygen: true,
     ph: true,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchAndParseData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/water_quality.csv");
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      const text = await res.text();
+
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        complete: ({ data, errors }) => {
+          if (errors.length) {
+            console.error("CSV parsing errors:", errors);
+            setError("Failed to parse CSV data.");
+          }
+
+          const formatted = data
+            .map((row) => {
+              const date = new Date(row["Date"]);
+              if (isNaN(date)) return null;
+              return {
+                date: date.getTime(),
+                temperature: parseFloat(row["Temperature(°C)"]),
+                salinity: parseFloat(row["Salinity(PSU)"]),
+                oxygen: parseFloat(row["Dissolved_Oxygen(mg/L)"]),
+                ph: parseFloat(row["pH"]),
+              };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.date - b.date);
+          setData(formatted);
+          setLoading(false);
+        },
+      });
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Could not load data. Please try again later.");
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetch("/water_quality.csv")
-      .then((res) => res.text())
-      .then((text) => {
-        Papa.parse(text, {
-          header: true,
-          skipEmptyLines: true,
-          complete: ({ data }) => {
-            const formatted = data
-              .map((row) => {
-                const date = new Date(row["Date"]);
-                if (isNaN(date)) return null;
-                return {
-                  date: date.getTime(),
-                  temperature: parseFloat(row["Temperature(°C)"]),
-                  salinity: parseFloat(row["Salinity(PSU)"]),
-                  oxygen: parseFloat(row["Dissolved_Oxygen(mg/L)"]),
-                  ph: parseFloat(row["pH"]),
-                };
-              })
-              .filter(Boolean)
-              .sort((a, b) => a.date - b.date);
-            setData(formatted);
-          },
-        });
-      });
-  }, []);
+    fetchAndParseData();
+  }, [fetchAndParseData]);
 
   const handleLineToggle = useCallback((dataKey) => {
     setVisibleLines((prev) => ({ ...prev, [dataKey]: !prev[dataKey] }));
   }, []);
 
+  if (loading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-[#010e13] text-white rounded-lg border border-cyan-400">
+        <p>Loading water quality data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-[#010e13] text-white rounded-lg border border-cyan-400">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-[#010e13] text-white rounded-lg border border-cyan-400">
+        <p className="text-gray-400">No data available.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full w-full p-7 rounded-lg border border-cyan-400 bg-[#010e13]  shadow-xl overflow-hidden">
+    <div className="h-full w-full p-7 rounded-lg border border-cyan-400 bg-[#010e13] shadow-xl overflow-hidden flex flex-col">
       <h2 className="text-xl sm:text-2xl font-bold text-cyan-300 mb-4 text-center">
         🌊 Water Quality Trends
       </h2>
 
       <div className="flex flex-wrap justify-center gap-2 mb-4">
         {[
-          { key: "temperature", label: "🌡 Temp (°C)", color: "bg-rose-600" },
-          { key: "salinity", label: "🧂 Salinity (PSU)", color: "bg-blue-600" },
-          { key: "oxygen", label: "💧 Oxygen (mg/L)", color: "bg-emerald-500" },
-          { key: "ph", label: "⚗️ pH", color: "bg-yellow-500" },
+          { key: "temperature", label: "🌡 Temp (°C)", color: "bg-rose-600", stroke: "#f43f5e" },
+          { key: "salinity", label: "🧂 Salinity (PSU)", color: "bg-blue-600", stroke: "#3b82f6" },
+          { key: "oxygen", label: "💧 Oxygen (mg/L)", color: "bg-emerald-500", stroke: "#10b981" },
+          { key: "ph", label: "⚗️ pH", color: "bg-yellow-500", stroke: "#eab308" },
         ].map(({ key, label, color }) => (
           <button
             key={key}
@@ -101,7 +146,7 @@ export default function WaterQ() {
         ))}
       </div>
 
-      <div className="h-full min-h-[350px] w-full">
+      <div className="flex-1 min-h-[350px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
@@ -198,4 +243,6 @@ export default function WaterQ() {
       </div>
     </div>
   );
-}
+});
+
+export default WaterQ;

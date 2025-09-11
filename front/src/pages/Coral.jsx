@@ -1,29 +1,24 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CloudUpload,
   MapPin,
   Leaf,
   FlaskConical,
-  Loader2,
-  Info,
   XCircle,
   ChevronDown,
   ChevronUp,
-} from "lucide-react"; // Added Chevron icons
+} from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { TextPlugin } from "gsap/TextPlugin";
-import Footer from "../components/bais/Footer"
-// Register GSAP plugins
+import Footer from "../components/bais/Footer";
+
 gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
-// --- Configuration ---
 const CORAL_URL = import.meta.env.VITE_CORAL_URL || "http://127.0.0.1:5000";
 
-
-// --- API Function ---
-async function getPrediction(file) {
+const getPrediction = async (file) => {
   const formData = new FormData();
   formData.append("image", file);
 
@@ -42,32 +37,31 @@ async function getPrediction(file) {
     console.error("Error fetching prediction from backend:", error);
     throw new Error(`Prediction failed: ${error.message}`);
   }
-}
+};
 
-export default function App() {
-  // State variables
+const App = memo(() => {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [geminiExplanation, setGeminiExplanation] = useState(null);
+  const [showFactors, setShowFactors] = useState(true);
+  const [showBenefits, setShowBenefits] = useState(true);
 
-  // NEW STATE for collapsible sections (optional, but good for long content)
-  const [showFactors, setShowFactors] = useState(true); // Start open
-  const [showBenefits, setShowBenefits] = useState(true); // Start open
-
-  // Refs for GSAP animations and DOM elements
   const fileInputRef = useRef(null);
   const appRef = useRef(null);
   const titleRef = useRef(null);
   const subtitleRef = useRef(null);
   const uploadZoneRef = useRef(null);
   const infoCardsRef = useRef([]);
-  const footerRef = useRef(null);
+
+  const infoCardsRefCallback = useCallback((el) => {
+    if (el) infoCardsRef.current.push(el);
+  }, []);
+
   const resultSectionRef = useRef(null);
 
-  // GSAP Animations Setup (Unchanged)
   useEffect(() => {
     let ctx = gsap.context(() => {
       gsap.from(appRef.current, {
@@ -136,24 +130,11 @@ export default function App() {
           gsap.to(icon, { scale: 1, duration: 0.3 });
         });
       });
-
-      gsap.from(footerRef.current, {
-        scrollTrigger: {
-          trigger: footerRef.current,
-          start: "top 90%",
-          toggleActions: "play none none none",
-        },
-        y: 50,
-        opacity: 0,
-        duration: 1,
-        ease: "power2.out",
-      });
     }, appRef);
 
     return () => ctx.revert();
   }, []);
 
-  // Effect for parsing Gemini explanation
   useEffect(() => {
     if (result && result.gemini_explanation) {
       try {
@@ -161,7 +142,6 @@ export default function App() {
           .replace(/```json/g, "")
           .replace(/```/g, "")
           .trim();
-
         const parsedData = JSON.parse(cleanedJson);
         setGeminiExplanation(parsedData);
       } catch (error) {
@@ -174,8 +154,7 @@ export default function App() {
     }
   }, [result]);
 
-  // File Handling Functions
-  const processFile = async (file) => {
+  const processFile = useCallback(async (file) => {
     if (file && file.type.startsWith("image/")) {
       if (uploadedImageUrl) URL.revokeObjectURL(uploadedImageUrl);
       const newImageUrl = URL.createObjectURL(file);
@@ -185,7 +164,6 @@ export default function App() {
       setResult(null);
       setGeminiExplanation(null);
       setLoading(true);
-      // Reset collapsible sections when processing new file
       setShowFactors(true);
       setShowBenefits(true);
 
@@ -200,32 +178,33 @@ export default function App() {
     } else {
       setError("Please upload a valid image file.");
     }
-  };
+  }, [uploadedImageUrl]);
 
-  const handleFileChange = (e) => processFile(e.target.files[0]);
-  const handleDrop = (e) => {
+  const handleFileChange = useCallback((e) => processFile(e.target.files[0]), [processFile]);
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     processFile(e.dataTransfer.files[0]);
-  };
-  const handleDragOver = (e) => e.preventDefault();
-  const resetApp = () => {
+  }, [processFile]);
+  const handleDragOver = useCallback((e) => e.preventDefault(), []);
+
+  const resetApp = useCallback(() => {
     setUploadedFile(null);
     setResult(null);
     setLoading(false);
     setError(null);
     setGeminiExplanation(null);
-    // Reset collapsible sections on app reset
     setShowFactors(true);
     setShowBenefits(true);
     if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+    if (uploadedImageUrl) URL.revokeObjectURL(uploadedImageUrl);
+    setUploadedImageUrl("");
+  }, [uploadedImageUrl]);
 
   return (
     <div
       ref={appRef}
       className="font-sans bg-gradient-to-br from-blue-950 to-teal-950 text-white min-h-screen flex flex-col items-center p-2 overflow-x-hidden md:max-w-screen"
     >
-      {/* Header */}
       <header className="text-center py-10 w-full max-w-4xl relative z-10">
         <h1
           ref={titleRef}
@@ -237,14 +216,12 @@ export default function App() {
           ref={subtitleRef}
           className="mt-4 text-cyan-100 max-w-3xl mx-auto text-lg sm:text-xl min-h-[72px]"
         >
-          {/* GSAP will populate this */}
         </p>
       </header>
 
-      {/* Drag & Drop Upload */}
       <section
         ref={uploadZoneRef}
-        className="relative border-4 border-dashed border-cyan-500 p-8 sm:p-12 mx-auto w-full md:w-2/3 lg:w-1/2 text-center rounded-2xl bg-cyan-800/20 cursor-pointer flex flex-col items-center justify-center min-h-[250px]  z-10"
+        className="relative border-4 border-dashed border-cyan-500 p-8 sm:p-12 mx-auto w-full md:w-2/3 lg:w-1/2 text-center rounded-2xl bg-cyan-800/20 cursor-pointer flex flex-col items-center justify-center min-h-[250px] z-10"
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current.click()}
@@ -265,10 +242,7 @@ export default function App() {
         </p>
         {uploadedFile && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              resetApp();
-            }}
+            onClick={resetApp}
             className="absolute top-4 right-4 text-red-400 hover:text-red-500 transition-colors"
           >
             <XCircle size={24} />
@@ -276,12 +250,11 @@ export default function App() {
         )}
       </section>
 
-      {/* Loading, Error & Result Display */}
       <AnimatePresence mode="wait">
         {loading && (
           <motion.div
             key="loading"
-            className="mt-10 max-w-md  flex flex-row items-center justify-center  z-10"
+            className="mt-10 max-w-md flex flex-row items-center justify-center z-10"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
@@ -293,8 +266,8 @@ export default function App() {
               muted
               playsInline
               className="w-42 h-42 object-cover"
+              preload="auto"
             />
-
             <p className="mt-4 text-xl text-cyan-200">
               Analyzing coral health...
             </p>
@@ -315,23 +288,25 @@ export default function App() {
         )}
 
         {result && !loading && (
-          <section
-            ref={resultSectionRef}
+          <motion.section
             key="result"
-            className="mt-10 w-full max-w-5xl mx-auto bg-gradient-to-br from-gray-900/80 to-blue-900/70 p-6 rounded-2xl shadow-2xl z-10 border  border-cyan-700"
+            className="mt-10 w-full max-w-5xl mx-auto bg-gradient-to-br from-gray-900/80 to-blue-900/70 p-6 rounded-2xl shadow-2xl z-10 border border-cyan-700"
+            ref={resultSectionRef}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] md:grid-rows-[auto_1fr] gap-4" >
-              {/* IMAGE */}
-              <div className="row-span-1 md:row-span-2 w-full max-w-[300px] bg-gray-800/50 rounded-lg  border border-cyan-600 flex items-center justify-center overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] md:grid-rows-[auto_1fr] gap-4">
+              <div className="row-span-1 md:row-span-2 w-full max-w-[300px] bg-gray-800/50 rounded-lg border border-cyan-600 flex items-center justify-center overflow-hidden">
                 <img
                   src={result.imageToDisplay}
                   alt="Uploaded Coral"
                   className="rounded-md w-full h-full object-cover"
+                  loading="lazy"
                 />
               </div>
 
-              {/* DESCRIPTION TOP */}
-              <div className="w-full h-[14rem] bg-gray-800/50 border border-cyan-600 rounded-lg p-4  overflow-y-auto custom-scrollbar">
+              <div className="w-full h-[14rem] bg-gray-800/50 border border-cyan-600 rounded-lg p-4 overflow-y-auto custom-scrollbar">
                 <h3 className="text-3xl sm:text-4xl text-cyan-200 font-bold mb-1">
                   Type:{" "}
                   <span className="text-teal-300">
@@ -374,7 +349,6 @@ export default function App() {
                 </p>
               </div>
 
-              {/* DESCRIPTION BELOW */}
               <div className="col-span-1 md:col-span-2 bg-gray-800/50 border border-cyan-600 rounded-lg p-4 max-h-[350px] overflow-y-auto custom-scrollbar">
                 {geminiExplanation && (
                   <>
@@ -382,7 +356,6 @@ export default function App() {
                       Detailed Insights:
                     </h4>
 
-                    {/* Geography */}
                     <div className="mb-6">
                       <h5 className="text-xl font-semibold text-rose-400 mb-2">
                         Geography
@@ -392,46 +365,74 @@ export default function App() {
                       </p>
                     </div>
 
-                    {/* Factors */}
-                    {/* Factors */}
                     <div className="mb-6">
-                      <h5 className="text-xl font-semibold text-red-700 mb-2">
+                      <button
+                        onClick={() => setShowFactors(!showFactors)}
+                        className="w-full flex items-center justify-between text-xl font-semibold text-red-700 mb-2"
+                      >
                         Factors Affecting Health
-                      </h5>
-                      <ul className="list-disc ml-5 space-y-1 text-cyan-100">
-                        {geminiExplanation.factors?.map((factor, index) => (
-                          <li key={index}>
-                            <strong className="text-red-400">
-                              {factor.name}:
-                            </strong>{" "}
-                            {factor.description}
-                          </li>
-                        ))}
-                      </ul>
+                        {showFactors ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                      <AnimatePresence>
+                        {showFactors && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            <ul className="list-disc ml-5 space-y-1 text-cyan-100">
+                              {geminiExplanation.factors?.map((factor, index) => (
+                                <li key={index}>
+                                  <strong className="text-red-400">
+                                    {factor.name}:
+                                  </strong>{" "}
+                                  {factor.description}
+                                </li>
+                              ))}
+                            </ul>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
-                    {/* Benefits */}
                     <div className="mb-6">
-                      <h5 className="text-xl font-semibold text-cyan-300 mb-2">
+                      <button
+                        onClick={() => setShowBenefits(!showBenefits)}
+                        className="w-full flex items-center justify-between text-xl font-semibold text-cyan-300 mb-2"
+                      >
                         Ecological & Human Benefits
-                      </h5>
-                      <ul className="list-disc ml-5 space-y-1 text-cyan-100">
-                        {geminiExplanation.benefits?.map((benefit, index) => (
-                          <li key={index}>
-                            <strong className="text-green-500">
-                              {benefit.type || benefit.aspect}:
-                            </strong>{" "}
-                            {benefit.description}
-                          </li>
-                        ))}
-                      </ul>
+                        {showBenefits ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                      <AnimatePresence>
+                        {showBenefits && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            <ul className="list-disc ml-5 space-y-1 text-cyan-100">
+                              {geminiExplanation.benefits?.map((benefit, index) => (
+                                <li key={index}>
+                                  <strong className="text-green-500">
+                                    {benefit.type || benefit.aspect}:
+                                  </strong>{" "}
+                                  {benefit.description}
+                                </li>
+                              ))}
+                            </ul>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Button */}
             <motion.button
               onClick={resetApp}
               className="w-full mt-6 px-6 py-3 bg-cyan-600 text-white font-semibold rounded-full shadow-lg hover:bg-cyan-500 transition-all"
@@ -443,14 +444,13 @@ export default function App() {
             >
               Analyze Another Image
             </motion.button>
-          </section>
+          </motion.section>
         )}
       </AnimatePresence>
 
-      {/* Info Sections (Unchanged) */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 sm:p-8 mt-14 w-full max-w-7xl z-10 mb-5">
         <div
-          ref={(el) => (infoCardsRef.current[0] = el)}
+          ref={infoCardsRefCallback}
           className="info-card bg-cyan-900/50 p-6 rounded-2xl shadow-xl border border-cyan-700"
         >
           <MapPin className="text-4xl text-cyan-300 mb-3" />
@@ -462,7 +462,7 @@ export default function App() {
         </div>
 
         <div
-          ref={(el) => (infoCardsRef.current[1] = el)}
+          ref={infoCardsRefCallback}
           className="info-card bg-cyan-900/50 p-6 rounded-2xl shadow-xl border border-cyan-700"
         >
           <Leaf className="text-4xl text-cyan-300 mb-3" />
@@ -474,7 +474,7 @@ export default function App() {
         </div>
 
         <div
-          ref={(el) => (infoCardsRef.current[2] = el)}
+          ref={infoCardsRefCallback}
           className="info-card bg-cyan-900/50 p-6 rounded-2xl shadow-xl border border-cyan-700"
         >
           <FlaskConical className="text-4xl text-cyan-300 mb-3" />
@@ -485,9 +485,9 @@ export default function App() {
         </div>
       </section>
 
-      {/* Footer (Unchanged) */}
-     
       <Footer />
     </div>
   );
-}
+});
+
+export default App;

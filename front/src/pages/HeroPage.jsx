@@ -197,13 +197,11 @@ export default function HeroPage() {
       });
     }
 
-    // ✅ Zig-Zag ScrollTrigger animation setup (inside useEffect)
     gsap.utils.toArray(".zig-zag-item").forEach((item, index) => {
       const media = item.querySelector(".zig-zag-media");
       const content = item.querySelector(".zig-zag-content");
       const isReversed = item.classList.contains("lg:flex-row-reverse");
 
-      // 👋 Entrance Animation (on scroll in)
       gsap.fromTo(
         media,
         {
@@ -242,28 +240,51 @@ export default function HeroPage() {
         }
       );
 
-      // 🎯 Reverse Scroll / Parallax-style effect (on scroll out)
       gsap.to(media, {
-        yPercent: isReversed ? 10 : -10, // Increased for better visibility
+        yPercent: isReversed ? 10 : -10,
         ease: "none",
         scrollTrigger: {
           trigger: item,
-          start: "center center", // Starts when top hits middle of viewport
-          end: "bottom top", // Ends after element is out of view
-          scrub: 0.5, // Smooth scrub animation
-          // markers: true,     // Uncomment for debugging
+          start: "center center",
+          end: "bottom top",
+          scrub: 0.5,
         },
       });
 
       gsap.to(content, {
-        yPercent: isReversed ? -40 : 40, // Increased movement
+        yPercent: isReversed ? -40 : 40,
         ease: "none",
         scrollTrigger: {
           trigger: item,
           start: "top center",
           end: "bottom top",
           scrub: 0.5,
-          // markers: true,
+        },
+      });
+    });
+
+    // The two gsap.utils.toArray calls from outside are now here
+    gsap.utils.toArray(".feature-card").forEach((card, i) => {
+      gsap.to(card, {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: card,
+          start: "top 85%",
+          toggleActions: "play none none reverse",
+        },
+      });
+
+      gsap.to(card, {
+        yPercent: -20,
+        ease: "none",
+        scrollTrigger: {
+          trigger: card,
+          start: "top center",
+          end: "bottom top",
+          scrub: 0.5,
         },
       });
     });
@@ -273,69 +294,33 @@ export default function HeroPage() {
       gsap.globalTimeline.clear();
     };
   }, [addToSectionsRef, addToBubbleRefs, addToCoralParticleRefs]);
-  gsap.utils.toArray(".feature-card").forEach((card, i) => {
-    // Fade-in on scroll
-    gsap.to(card, {
-      opacity: 1,
-      y: 0,
-      duration: 1,
-      ease: "power3.out",
-      scrollTrigger: {
-        trigger: card,
-        start: "top 85%",
-        toggleActions: "play none none reverse",
-      },
-    });
-
-    // Reverse parallax on scroll out
-    gsap.to(card, {
-      yPercent: -20,
-      ease: "none",
-      scrollTrigger: {
-        trigger: card,
-        start: "top center",
-        end: "bottom top",
-        scrub: 0.5,
-      },
-    });
-  });
 
   return (
     <div className="w-full overflow-x-hidden text-white relative">
-      {/* 🌊 Fixed Background Video */}
       <video
         src="/more.mp4"
         autoPlay
         loop
         muted
         playsInline
-        className="fixed top-0 left-0 w-screen h-screen object-cover z-[-2] pointer-events-none" // Changed z-index
+        className="fixed top-0 left-0 w-screen h-screen object-cover z-[-2] pointer-events-none"
       />
 
-      {/* Optional Overlay for better text visibility */}
       <div className="fixed inset-0 bg-black/40 z-[-1] pointer-events-none" />
 
       <HomeN />
 
-      {/* Hero Section */}
       <section className="hero-section relative z-10 min-h-screen px-6 pt-32 pb-24 flex items-center justify-center overflow-hidden">
-        {/* Remove the duplicate video here */}
-        {/* Water surface effect (z-index 2) */}
         <div className="water-surface absolute inset-0 z-2"></div>
-        {/* Ocean floor effect (z-index 1) */}
         <div className="ocean-floor absolute inset-0 z-1"></div>
-        {/* Overlay (z-index 10 - higher to cover background but below content) */}
-        <div className="absolute inset-0 bg-transparent z-10" />{" "}
-        {/* Ensure this overlay is transparent or has low opacity if you want video to show */}
-        {/* Content Container (z-index 20 - highest) */}
+        <div className="absolute inset-0 bg-transparent z-10" />
         <div className="relative z-20 flex flex-col lg:flex-row items-center justify-between max-w-7xl w-full gap-10 text-center lg:text-left">
-          {/* Left: Headline and Description */}
           <div className="w-full lg:w-1/2">
             <motion.h1
               initial={{ opacity: 0, x: -60 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 1.2, ease: "easeOut" }}
-              className="text-5xl sm:text-6xl font-extrabold   text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 leading-tight mb-6 drop-shadow-lg" // Adjusted gradient & shadow
+              className="text-5xl sm:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 leading-tight mb-6 drop-shadow-lg"
             >
               Revolutionizing <br /> Ocean Conservation
             </motion.h1>
@@ -343,7 +328,7 @@ export default function HeroPage() {
               initial={{ opacity: 0, x: -60 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
-              className="text-xl text-cyan-100 mb-8 max-w-lg mx-auto lg:mx-0" // Center on small screens
+              className="text-xl text-cyan-100 mb-8 max-w-lg mx-auto lg:mx-0"
             >
               Harnessing biomimetic AI and cutting-edge technology to protect
               and restore our planet's marine ecosystems.
@@ -352,26 +337,23 @@ export default function HeroPage() {
               whileHover={{
                 scale: 1.05,
                 boxShadow: "0 0 25px rgba(0, 200, 255, 0.5)",
-              }} // Enhanced hover effect
+              }}
               whileTap={{ scale: 0.95 }}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
-              className="px-10 py-4 bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-semibold rounded-full shadow-lg hover:from-cyan-500 hover:to-blue-600 transition-all duration-300 transform hover:-translate-y-1" // More prominent button
+              className="px-10 py-4 bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-semibold rounded-full shadow-lg hover:from-cyan-500 hover:to-blue-600 transition-all duration-300 transform hover:-translate-y-1"
             >
               Dive Into Innovation
             </motion.button>
           </div>
-          {/* Right: Image Card */}
           <motion.div
             initial={{ opacity: 0, x: 60 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
             className="w-full lg:w-1/2 flex items-center justify-center"
           >
-            <div className="w-[90%] sm:w-[80%] md:w-[115%] bg-white/10 border border-cyan-300/20 rounded-xl shadow-xl backdrop-blur-md  flex items-center justify-center overflow-hidden neon-glow">
-              {" "}
-              {/* Added neon glow */}
+            <div className="w-[90%] sm:w-[80%] md:w-[115%] bg-white/10 border border-cyan-300/20 rounded-xl shadow-xl backdrop-blur-md flex items-center justify-center overflow-hidden neon-glow">
               <video
                 src="/modle2.mp4"
                 autoPlay
@@ -385,7 +367,6 @@ export default function HeroPage() {
         </div>
       </section>
 
-      {/* Core Values Section */}
       <section
         ref={addToSectionsRef}
         className="relative z-10 py-28 px-6 bg-gradient-to-b"
@@ -418,10 +399,6 @@ export default function HeroPage() {
             {features.map((item, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
-                viewport={{ once: true }}
                 className="group rounded-2xl bg-white/5 backdrop-blur-lg border border-cyan-500/20 shadow-md shadow-cyan-300/10 p-6 hover:scale-[1.03] hover:shadow-cyan-400/30 transition-transform duration-300"
               >
                 <div className="flex justify-center items-center mb-4">
@@ -439,9 +416,8 @@ export default function HeroPage() {
         </div>
       </section>
 
-      {/* Zig-Zag Sections */}
       <section
-        className="relative z-10 bg-transparent px-6 py-28 overflow-hidden" // Added overflow-hidden
+        className="relative z-10 bg-transparent px-6 py-28 overflow-hidden"
       >
         <div className="max-w-6xl mx-auto space-y-28">
           {[
@@ -463,7 +439,6 @@ export default function HeroPage() {
           ].map((item, n) => (
             <div
               key={n}
-              // Added zig-zag-item class for GSAP targeting
               className={`zig-zag-item flex flex-col lg:flex-row items-center gap-10 ${
                 n % 2 === 0 ? "lg:flex-row-reverse" : ""
               }`}
@@ -486,7 +461,6 @@ export default function HeroPage() {
                 <p className="text-sky-100 text-lg leading-relaxed">
                   {item.desc}
                 </p>
-             
               </div>
             </div>
           ))}

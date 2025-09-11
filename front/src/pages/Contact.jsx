@@ -1,14 +1,41 @@
-import React, { useEffect, useState } from "react"; // Import useState
+import React, { useEffect, useState, useCallback, memo } from "react";
 import Footer from "../components/bais/Footer";
-import { motion, useAnimation } from "framer-motion";
+import { motion, useAnimation, AnimatePresence } from "framer-motion";
 import { useInView } from "react-intersection-observer";
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
 
-export default function Contact() {
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+// Memoize the submission status message component
+const SubmissionStatusMessage = memo(({ status, message }) => {
+  if (!status) return null;
+
+  let bgColor;
+  if (status === "success") {
+    bgColor = "bg-green-600/80 text-white";
+  } else if (status === "error") {
+    bgColor = "bg-red-600/80 text-white";
+  } else {
+    bgColor = "bg-blue-600/80 text-white";
+  }
+
+  return (
+    <motion.div
+      className={`p-3 rounded-md text-center text-lg font-medium ${bgColor}`}
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
+      {message}
+    </motion.div>
+  );
+});
+
+// Memoize the main Contact component
+const Contact = memo(() => {
   const controls = useAnimation();
   const [ref, inView] = useInView({ threshold: 0.1 });
 
-  // State to manage form data
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -17,12 +44,13 @@ export default function Contact() {
     message: "",
   });
 
-  // State for form submission feedback
-  const [submissionStatus, setSubmissionStatus] = useState(null); // 'success', 'error', 'submitting'
+  const [submissionStatus, setSubmissionStatus] = useState(null);
   const [submissionMessage, setSubmissionMessage] = useState("");
 
   useEffect(() => {
-    if (inView) controls.start("visible");
+    if (inView) {
+      controls.start("visible");
+    }
   }, [inView, controls]);
 
   const containerVariants = {
@@ -48,59 +76,59 @@ export default function Contact() {
     },
   };
 
-  // Handle input changes
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
     }));
-  };
+  }, []);
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form submission
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
 
-    setSubmissionStatus("submitting");
-    setSubmissionMessage("Sending your message...");
+      setSubmissionStatus("submitting");
+      setSubmissionMessage("Sending your message...");
 
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/posts/contact`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSubmissionStatus("success");
-        setSubmissionMessage("Message sent successfully!");
-        setFormData({ // Clear form after successful submission
-          firstName: "",
-          lastName: "",
-          email: "",
-          phone: "",
-          message: "",
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/posts/contact`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
         });
-      } else {
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setSubmissionStatus("success");
+          setSubmissionMessage("Message sent successfully!");
+          setFormData({
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+            message: "",
+          });
+        } else {
+          setSubmissionStatus("error");
+          setSubmissionMessage(data.message || "Failed to send message. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error submitting form:", error);
         setSubmissionStatus("error");
-        setSubmissionMessage(data.message || "Failed to send message. Please try again.");
+        setSubmissionMessage("Network error. Could not connect to the server.");
+      } finally {
+        setTimeout(() => {
+          setSubmissionStatus(null);
+          setSubmissionMessage("");
+        }, 5000);
       }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      setSubmissionStatus("error");
-      setSubmissionMessage("Network error. Could not connect to the server.");
-    } finally {
-      // Clear status message after a few seconds
-      setTimeout(() => {
-        setSubmissionStatus(null);
-        setSubmissionMessage("");
-      }, 5000);
-    }
-  };
+    },
+    [formData]
+  );
 
   return (
     <div className="relative flex flex-col min-h-screen bg-gradient-to-br from-[#02182B] via-[#043353] to-[#010D18] text-white overflow-hidden">
@@ -166,7 +194,7 @@ export default function Contact() {
             >
               Ready to explore? Reach out manually to{" "}
               <a
-                href="mailto:hello@matsyaark.com"
+                href="mailto:aryannaruka7@gmail.com"
                 className="text-blue-300 underline hover:text-blue-200 transition-colors duration-300"
               >
                 aryannaruka7@gmail.com
@@ -174,86 +202,74 @@ export default function Contact() {
               or use the form below.
             </motion.p>
 
-            {/* Submission Status Message */}
-            {submissionStatus && (
-              <motion.div
-                className={`p-3 rounded-md text-center text-lg font-medium ${
-                  submissionStatus === "success"
-                    ? "bg-green-600/80 text-white"
-                    : submissionStatus === "error"
-                    ? "bg-red-600/80 text-white"
-                    : "bg-blue-600/80 text-white"
-                }`}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                {submissionMessage}
-              </motion.div>
-            )}
+            <AnimatePresence>
+              <SubmissionStatusMessage
+                status={submissionStatus}
+                message={submissionMessage}
+              />
+            </AnimatePresence>
 
             <motion.form
               className="grid grid-cols-1 md:grid-cols-2 gap-4"
               variants={containerVariants}
-              onSubmit={handleSubmit} // Add onSubmit handler
+              onSubmit={handleSubmit}
             >
               <motion.input
                 type="text"
-                name="firstName" // Add name attribute
+                name="firstName"
                 placeholder="First Name"
-                value={formData.firstName} // Bind value
-                onChange={handleChange} // Add onChange handler
+                value={formData.firstName}
+                onChange={handleChange}
                 className="p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 col-span-1"
                 variants={itemVariants}
-                required // Make required
+                required
               />
               <motion.input
                 type="text"
-                name="lastName" // Add name attribute
+                name="lastName"
                 placeholder="Last Name"
-                value={formData.lastName} // Bind value
-                onChange={handleChange} // Add onChange handler
+                value={formData.lastName}
+                onChange={handleChange}
                 className="p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 col-span-1"
                 variants={itemVariants}
-                required // Make required
+                required
               />
               <motion.input
                 type="email"
-                name="email" // Add name attribute
+                name="email"
                 placeholder="Email Address"
-                value={formData.email} // Bind value
-                onChange={handleChange} // Add onChange handler
+                value={formData.email}
+                onChange={handleChange}
                 className="p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 col-span-2"
                 variants={itemVariants}
-                required // Make required
+                required
               />
               <motion.input
                 type="tel"
-                name="phone" // Add name attribute
+                name="phone"
                 placeholder="+91 (000) 000-0000"
-                value={formData.phone} // Bind value
-                onChange={handleChange} // Add onChange handler
+                value={formData.phone}
+                onChange={handleChange}
                 className="p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200 col-span-2"
                 variants={itemVariants}
               />
 
               <motion.textarea
                 rows="4"
-                name="message" // Add name attribute
+                name="message"
                 placeholder="Share your depths with us..."
-                value={formData.message} // Bind value
-                onChange={handleChange} // Add onChange handler
+                value={formData.message}
+                onChange={handleChange}
                 className="col-span-2 p-3 rounded-md bg-white/15 text-white border border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-cyan-200"
                 variants={itemVariants}
-                required // Make required
+                required
               ></motion.textarea>
 
               <motion.button
                 type="submit"
-                className="col-span-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-md transition duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                className="col-span-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-md transition duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 variants={itemVariants}
-                disabled={submissionStatus === "submitting"} // Disable button during submission
+                disabled={submissionStatus === "submitting"}
               >
                 {submissionStatus === "submitting" ? "Sending..." : "Send Your Message →"}
               </motion.button>
@@ -307,4 +323,6 @@ export default function Contact() {
       `}</style>
     </div>
   );
-}
+});
+
+export default Contact;

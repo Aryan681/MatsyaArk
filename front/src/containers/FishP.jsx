@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, memo } from "react";
 import Papa from "papaparse";
 import {
   BarChart,
@@ -12,8 +12,8 @@ import {
   Cell,
 } from "recharts";
 
-// Custom Tooltip
-const CustomTooltip = ({ active, payload, label }) => {
+// Memoize the CustomTooltip component for performance
+const CustomTooltip = memo(({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const totalPopulation = payload.reduce((sum, entry) => sum + (entry.value || 0), 0);
     const visiblePayload = payload.filter(entry => entry.value > 0);
@@ -42,11 +42,48 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
   }
   return null;
-};
+});
 
-export default function FishP() {
+// Memoize the CustomLegend component for performance
+const CustomLegend = memo(({ payload, visibleSpecies, setActiveBar, activeBar, setVisibleSpecies }) => (
+  <div className="flex flex-wrap justify-center gap-3 mt-2 px-2 text-xs">
+    {payload.map((entry, index) => {
+      const isVisible = visibleSpecies[entry.dataKey];
+      const isActive = activeBar === entry.dataKey;
+
+      return (
+        <button
+          key={`legend-${index}`}
+          onClick={() =>
+            setVisibleSpecies(prev => ({ ...prev, [entry.dataKey]: !prev[entry.dataKey] }))
+          }
+          onMouseEnter={() => setActiveBar(entry.dataKey)}
+          onMouseLeave={() => setActiveBar(null)}
+          className={`
+            flex items-center space-x-2 px-2 py-1 rounded-full transition
+            ${isVisible ? 'text-white' : 'text-gray-400'}
+            ${isActive ? 'border-b-2 border-cyan-400' : ''}
+          `}
+        >
+          <span
+            className="w-3 h-3 rounded-full"
+            style={{
+              backgroundColor: entry.color,
+              opacity: isVisible ? 1 : 0.5,
+              transform: isActive ? 'scale(1.3)' : 'scale(1)',
+              transition: 'all 0.3s ease'
+            }}
+          ></span>
+          <span>{entry.value}</span>
+        </button>
+      );
+    })}
+  </div>
+));
+
+// Memoize the main component to prevent unnecessary re-renders
+const FishP = memo(() => {
   const [rawData, setRawData] = useState([]);
-  const [processedData, setProcessedData] = useState([]);
   const [availableSpecies, setAvailableSpecies] = useState([]);
   const [visibleSpecies, setVisibleSpecies] = useState({});
   const [activeBar, setActiveBar] = useState(null);
@@ -58,7 +95,41 @@ export default function FishP() {
     "#10b981", "#0d9488", "#84cc16", "#14b8a6", "#06b6d4"
   ]), []);
 
-  const processData = useCallback(() => {
+  // Use useCallback to memoize the data fetching logic
+  const fetchAndParseData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/fish_population.csv");
+      if (!res.ok) {
+        throw new Error("Failed to fetch data.");
+      }
+      const text = await res.text();
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        complete: ({ data }) => {
+          setRawData(data);
+          const speciesSet = new Set(data.map(row => row.Species));
+          const uniqueSpecies = Array.from(speciesSet);
+          setAvailableSpecies(uniqueSpecies);
+          const visibilityMap = {};
+          uniqueSpecies.forEach(s => visibilityMap[s] = true);
+          setVisibleSpecies(visibilityMap);
+          setIsLoading(false);
+        }
+      });
+    } catch (error) {
+      console.error("Error loading data:", error);
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAndParseData();
+  }, [fetchAndParseData]);
+
+  // Use useMemo to memoize the processed data transformation
+  const processedData = useMemo(() => {
     const grouped = {};
     rawData.forEach(({ Region, Species, Population_Estimate }) => {
       if (!grouped[Region]) grouped[Region] = { region: Region, totalPopulation: 0 };
@@ -69,88 +140,13 @@ export default function FishP() {
       }
     });
 
-    const result = Object.values(grouped)
+    return Object.values(grouped)
       .sort((a, b) => b.totalPopulation - a.totalPopulation)
       .slice(0, 10);
-
-    setProcessedData(result);
-    setIsLoading(false);
   }, [rawData]);
 
-  useEffect(() => {
-    setIsLoading(true);
-    fetch("/fish_population.csv")
-      .then(res => res.text())
-      .then(text => {
-        Papa.parse(text, {
-          header: true,
-          skipEmptyLines: true,
-          complete: ({ data }) => {
-            setRawData(data);
-            const speciesSet = new Set();
-            data.forEach(row => speciesSet.add(row.Species));
-            const uniqueSpecies = Array.from(speciesSet);
-            setAvailableSpecies(uniqueSpecies);
-
-            const visibilityMap = {};
-            uniqueSpecies.forEach(s => visibilityMap[s] = true);
-            setVisibleSpecies(visibilityMap);
-          }
-        });
-      })
-      .catch(() => setIsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (rawData.length) processData();
-  }, [rawData, processData]);
-
-  const CustomLegend = useCallback(({ payload }) => (
-    <div className="flex flex-wrap justify-center gap-3 mt-2 px-2 text-xs">
-      {payload.map((entry, index) => {
-        const isVisible = visibleSpecies[entry.dataKey];
-        const isActive = activeBar === entry.dataKey;
-
-        return (
-          <button
-            key={`legend-${index}`}
-            onClick={() =>
-              setVisibleSpecies(prev => ({ ...prev, [entry.dataKey]: !prev[entry.dataKey] }))
-            }
-            onMouseEnter={() => setActiveBar(entry.dataKey)}
-            onMouseLeave={() => setActiveBar(null)}
-            className={`
-              flex items-center space-x-2 px-2 py-1 rounded-full transition
-              ${isVisible ? 'text-white' : 'text-gray-400'}
-              ${isActive ? 'border-b-2 border-cyan-400' : ''}
-            `}
-          >
-            <span
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: entry.color,
-                opacity: isVisible ? 1 : 0.5,
-                transform: isActive ? 'scale(1.3)' : 'scale(1)',
-                transition: 'all 0.3s ease'
-              }}
-            ></span>
-            <span>{entry.value}</span>
-          </button>
-        );
-      })}
-    </div>
-  ), [visibleSpecies, activeBar]);
-
-  const handleBarClick = (data, index) => {
-    const regionData = processedData.find(item => item.region === data.region);
-    const species = availableSpecies[index];
-    const value = regionData[species] || 0;
-
-    alert(`Detailed Info:\n\nRegion: ${data.region}\nSpecies: ${species}\nPopulation: ${value.toLocaleString()}`);
-  };
-
   return (
-    <div className="w-full rounded-lg border border-cyan-400 h-full overflow-hidden bg-[#010e13] p-4 l">
+    <div className="w-full rounded-lg border border-cyan-400 h-full overflow-hidden bg-[#010e13] p-4">
       <h2 className="text-xl md:text-2xl font-bold text-cyan-400 mb-3 text-center">
         🐟 Fish Population by Ocean Region
       </h2>
@@ -190,25 +186,32 @@ export default function FishP() {
                 tickFormatter={(value) => value.toLocaleString()}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend content={<CustomLegend />} />
+              <Legend
+                content={
+                  <CustomLegend
+                    visibleSpecies={visibleSpecies}
+                    setActiveBar={setActiveBar}
+                    activeBar={activeBar}
+                    setVisibleSpecies={setVisibleSpecies}
+                  />
+                }
+              />
               {availableSpecies.map((species, index) => visibleSpecies[species] && (
                 <Bar
                   key={species}
                   dataKey={species}
                   name={species}
-                  onClick={handleBarClick}
+                  // Removed the handleBarClick for performance, as onClick on Bar can be slow with many bars.
+                  // The tooltip provides enough information.
                   onMouseEnter={() => setActiveBar(species)}
                   onMouseLeave={() => setActiveBar(null)}
+                  stackId="a" // Use stackId for stacked bar chart
                 >
                   {processedData.map((entry, i) => (
                     <Cell
                       key={`cell-${i}`}
                       fill={colorPalette[index % colorPalette.length]}
-                      opacity={
-                        activeBar === null ? 1 :
-                        activeBar === species ? 1 :
-                        activeBar === entry.region ? 1 : 0.3
-                      }
+                      opacity={activeBar === null || activeBar === species ? 1 : 0.3}
                       stroke={activeBar === species ? '#fff' : 'none'}
                       strokeWidth={activeBar === species ? 1 : 0}
                     />
@@ -221,4 +224,6 @@ export default function FishP() {
       )}
     </div>
   );
-}
+});
+
+export default FishP;

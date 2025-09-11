@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, memo } from "react";
 import Papa from "papaparse";
 
-export default function Heatmap() {
+const Heatmap = memo(() => {
   const [matrix, setMatrix] = useState([]);
   const [hoveredCell, setHoveredCell] = useState(null);
   const containerRef = useRef(null);
@@ -45,21 +45,6 @@ export default function Heatmap() {
     return "bg-red-700";
   };
 
-  // Tooltip positioning (object, not function)
-  const getTooltipStyle = () => {
-    if (!containerRef.current || !hoveredCell) return {};
-    const parentRect = containerRef.current.getBoundingClientRect();
-    const top = parentRect.top + 80 + hoveredCell.rowIndex * 40;
-    const left = parentRect.left + 80 + hoveredCell.colIndex * 40;
-    return {
-      position: "absolute",
-      top: `${top}px`,
-      left: `${left}px`,
-      transform: "translateY(-100%)",
-      maxWidth: "200px",
-    };
-  };
-
   return (
     <div
       ref={containerRef}
@@ -95,7 +80,7 @@ export default function Heatmap() {
                 {row.map((cell, colIndex) => (
                   <td
                     key={colIndex}
-                    className={`w-10 h-10 border border-cyan-800 text-center text-[10px] font-bold text-black cursor-pointer hover:scale-105 hover:shadow-md transition transform ${getColor(
+                    className={`relative w-10 h-10 border border-cyan-800 text-center text-[10px] font-bold text-black cursor-pointer hover:scale-105 hover:shadow-md transition transform ${getColor(
                       cell.value
                     )}`}
                     onMouseEnter={() =>
@@ -104,6 +89,17 @@ export default function Heatmap() {
                     onMouseLeave={() => setHoveredCell(null)}
                   >
                     {(cell.value * 100).toFixed(0)}%
+                    {hoveredCell &&
+                      hoveredCell.rowIndex === rowIndex &&
+                      hoveredCell.colIndex === colIndex && (
+                        <div
+                          className="absolute z-50 p-2 bg-gray-800 text-white text-xs rounded shadow-lg pointer-events-none -top-10 left-1/2 transform -translate-x-1/2"
+                        >
+                          <strong>Year:</strong> {hoveredCell.year}
+                          <br />
+                          <strong>Anomaly:</strong> {hoveredCell.value.toFixed(2)}°C
+                        </div>
+                      )}
                   </td>
                 ))}
               </tr>
@@ -111,17 +107,8 @@ export default function Heatmap() {
           </tbody>
         </table>
       </div>
-
-      {hoveredCell && (
-        <div
-          className="z-10 p-2 bg-gray-800 text-white text-xs rounded shadow-lg pointer-events-none"
-          style={getTooltipStyle()}
-        >
-          <strong>Year:</strong> {hoveredCell.year}
-          <br />
-          <strong>Anomaly:</strong> {hoveredCell.value.toFixed(2)}°C
-        </div>
-      )}
     </div>
   );
-}
+});
+
+export default Heatmap;
